@@ -13,59 +13,38 @@ export default {
 		env.PREV_TIMESTAMP = Date.now()
 
 		for (const feed of feeds) {
-			var text
-			try {
-				const res = await fetch(feed)
-				if (!res.ok) {
-					text = "Couldn't fetch " + feed
-				}
+			const msg = createMimeMessage()
+			msg.setSender({ name: "rss", addr: "rss@benkarstens.com" });
+			msg.setRecipient("benkarstens@web.de");
 
-				const xml = await res.text()
-				const parsed = parser.parse(xml)
-
-				var feed_title, timestamp, title, link
-
-				if (feed == "https://thephd.dev/feed.xml") {
-					feed_title = parsed.feed.title["#text"]
-					const item = parsed.feed.entry[0]
-					timestamp = new Date(item.published).getTime()
-					title = item.link["@_title"]
-					link = item.link["@_href"]
-				} else {
-					feed_title = parsed.rss.channel.title
-					const item = parsed.rss.channel.item[0]
-					timestamp = new Date(item.pubDate).getTime()
-					title = item.title
-					link = item.link
-				}
-
-				if (timestamp > prevTimestamp) {
-					text = title + '\n' + link
-				}
-			} catch (e) {
-				text = e.message
-			}
-
-			if (text) {
-				const msg = createMimeMessage();
-				msg.setSender({ name: "rss", addr: "rss@benkarstens.com" });
-				msg.setRecipient("benkarstens@web.de");
-				msg.setSubject(feed_title);
+			let timestamp
+			const res = await fetch(feed)
+			const parsed = parser.parse(await res.text())
+			if (feed == "https://thephd.dev/feed.xml") {
+				msg.setSubject(parsed.feed.title["#text"])
+				const item = parsed.feed.entry[0]
 				msg.addMessage({
 					contentType: 'text/plain',
-					data: text
-				});
+					data: item.link["@_title"] + '\n' + item.link["@_href"]
+				})
+				timestamp = new Date(item.published).getTime()
+			} else {
+				msg.setSubject(parsed.rss.channel.title)
+				const item = parsed.rss.channel.item[0]
+				msg.addMessage({
+					contentType: 'text/plain',
+					data: item.title + '\n' + item.link
+				})
+				timestamp = new Date(item.pubDate).getTime()
+			}
 
-				var message = new EmailMessage(
+			if (timestamp > prevTimestamp) {
+				let message = new EmailMessage(
 					"rss@benkarstens.com",
 					"benkarstens@web.de",
 					msg.asRaw()
-				);
-				try {
-					await env.email.send(message);
-				} catch (e) {
-					console.log(e.message)
-				}
+				)
+				await env.email.send(message)
 			}
 		}
 	}
