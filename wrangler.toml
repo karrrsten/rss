@@ -3,10 +3,13 @@ name = "rss"
 main = "src/index.js"
 compatibility_date = "2024-12-18"
 compatibility_flags = ["nodejs_compat"]
-send_email = [{ name = "email", destination_address = "benkarstens@web.de" }]
+workers_dev = false
 
 [observability]
 enabled = true
+
+[triggers]
+crons = ["0 * * * *"]
 
 [vars]
 FEEDS = [
@@ -14,7 +17,11 @@ FEEDS = [
 	"https://ciechanow.ski/atom.xml",
 	"http://radar.spacebar.org/f/a/weblog/rss/1",
 ]
-PREV_TIMESTAMP = 0
 
-[triggers]
-crons = ["0 0 * * *"]
+[[send_email]]
+name = "email"
+destination_address = "benkarstens@web.de"
+
+[[kv_namespaces]]
+binding = "kv"
+id = "8e096049d2d94b2f872427efdf41b559"

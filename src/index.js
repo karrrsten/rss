@@ -3,14 +3,12 @@ import { createMimeMessage } from "mimetext";
 import { XMLParser } from "fast-xml-parser";
 
 export default {
-	async scheduled(request, env) {
+	async scheduled(event, env, ctx) {
 		const parser = new XMLParser({
 			ignoreAttributes: false
 		})
 		const feeds = env.FEEDS
-		const prevTimestamp = env.PREV_TIMESTAMP
-
-		env.PREV_TIMESTAMP = Date.now()
+		const last_run = await env.kv.get("last_run")
 
 		for (const feed of feeds) {
 			const msg = createMimeMessage()
@@ -38,7 +36,7 @@ export default {
 				timestamp = new Date(item.pubDate).getTime()
 			}
 
-			if (timestamp > prevTimestamp) {
+			if (timestamp > last_run) {
 				let message = new EmailMessage(
 					"rss@benkarstens.com",
 					"benkarstens@web.de",
@@ -47,5 +45,6 @@ export default {
 				await env.email.send(message)
 			}
 		}
+		await env.kv.put("last_run", event.scheduledTime)
 	}
 };
